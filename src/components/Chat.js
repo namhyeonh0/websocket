@@ -8,7 +8,6 @@ const Chat = ({roomId, token, onLeaveRoom, email, opposite, stompClient}) => {
     const stompClientRef = useRef(stompClient);
     const [subscribed, setSubscribed] = useState(false);
 
-    // 채팅방 메시지 가져오기
     const fetchMessages = async () => {
         try {
             const response = await axios.get(
@@ -26,8 +25,8 @@ const Chat = ({roomId, token, onLeaveRoom, email, opposite, stompClient}) => {
     const initializeUnRead = async () => {
         try {
             await axios.put(`http://localhost:5000/api/v1/unread/init`,
-                { chatRoomId: roomId, username: email },
-                { headers: { Authorization: `Bearer ${token}` } },
+                {chatRoomId: roomId, username: email},
+                {headers: {Authorization: `Bearer ${token}`}},
             );
         } catch (error) {
             console.error("UnRead Initialization fail:", error);
@@ -37,7 +36,7 @@ const Chat = ({roomId, token, onLeaveRoom, email, opposite, stompClient}) => {
     const sendMessage = () => {
         if (stompClientRef.current && messageContent.trim()) {
             stompClientRef.current.publish({
-                destination: `/app/chat/send/${roomId}`,  // 서버에서 메시지를 받을 엔드포인트
+                destination: `/app/chat/send/${roomId}`,
                 body: JSON.stringify({
                     message: messageContent,
                     sender: email,
@@ -58,7 +57,6 @@ const Chat = ({roomId, token, onLeaveRoom, email, opposite, stompClient}) => {
 
             subscribe = stompClientRef.current.subscribe(`/topic/chatroom/${roomId}`, (message) => {
                 try {
-                    // 서버에서 온 메시지 파싱
                     const chatMessage = JSON.parse(message.body);
                     setMessages((prevMessages) => [...prevMessages, chatMessage]);
                     setSubscribed(true);
@@ -74,7 +72,7 @@ const Chat = ({roomId, token, onLeaveRoom, email, opposite, stompClient}) => {
                 subscribe.unsubscribe();
             }
         };
-    }, []); // chatRoomId가 변경될 때마다 재연결
+    }, []);
 
     useEffect(() => {
         if (messagesEndRef.current) {
@@ -84,7 +82,7 @@ const Chat = ({roomId, token, onLeaveRoom, email, opposite, stompClient}) => {
 
     const handleKeyDown = (e) => {
         if (e.key === "Enter") {
-            e.preventDefault(); // 기본 동작 방지 (form 제출 등)
+            e.preventDefault();
             sendMessage();
         }
     };
@@ -107,7 +105,7 @@ const Chat = ({roomId, token, onLeaveRoom, email, opposite, stompClient}) => {
                         key={index}
                         style={{
                             display: "flex",
-                            justifyContent: msg.sender === email ? "flex-end" : "flex-start",
+                            justifyContent: msg.senderEmail === email ? "flex-end" : "flex-start",
                             margin: "5px 0",
                         }}
                     >
@@ -116,13 +114,13 @@ const Chat = ({roomId, token, onLeaveRoom, email, opposite, stompClient}) => {
                                 maxWidth: "60%",
                                 padding: "10px",
                                 borderRadius: "10px",
-                                backgroundColor: msg.sender === email ? "#dcf8c6" : "#fff",
+                                backgroundColor: msg.senderEmail === email ? "#dcf8c6" : "#fff",
                                 border: "1px solid #ddd",
                                 wordWrap: "break-word",
                                 boxShadow: "0 2px 5px rgba(0, 0, 0, 0.1)",
                             }}
                         >
-                            <strong>{msg.sender}</strong>
+                            <strong>{msg.senderName}</strong>
                             <p style={{margin: 0}}>{msg.message}</p>
                         </div>
                     </div>
@@ -144,7 +142,7 @@ const Chat = ({roomId, token, onLeaveRoom, email, opposite, stompClient}) => {
                     type="text"
                     value={messageContent}
                     onChange={(e) => setMessageContent(e.target.value)}
-                    onKeyDown={handleKeyDown} // 엔터 키 감지
+                    onKeyDown={handleKeyDown}
                     placeholder="Type a message..."
                     style={{
                         flex: 1,
