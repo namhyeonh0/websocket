@@ -13,7 +13,7 @@ const Chat = ({roomId, token, onLeaveRoom, email, opposite, stompClient}) => {
             const response = await axios.get(
                 `http://localhost:5000/api/v1/chatmessages/${roomId}`,
                 {
-                    headers: {Authorization: `Bearer ${token}`},
+                    headers: {Authorization: `${token}`},
                 }
             );
             setMessages(response.data);
@@ -25,8 +25,8 @@ const Chat = ({roomId, token, onLeaveRoom, email, opposite, stompClient}) => {
     const initializeUnRead = async () => {
         try {
             await axios.put(`http://localhost:5000/api/v1/unread/init`,
-                {chatRoomId: roomId, username: email},
-                {headers: {Authorization: `Bearer ${token}`}},
+                {chatRoomId: roomId, userEmail: email},
+                {headers: {Authorization: `${token}`}},
             );
         } catch (error) {
             console.error("UnRead Initialization fail:", error);
@@ -39,8 +39,8 @@ const Chat = ({roomId, token, onLeaveRoom, email, opposite, stompClient}) => {
                 destination: `/app/chat/send/${roomId}`,
                 body: JSON.stringify({
                     message: messageContent,
-                    sender: email,
-                    receiver: opposite,
+                    senderEmail: email,
+                    receiverEmail: opposite,
                 })
             });
             setMessageContent('');
