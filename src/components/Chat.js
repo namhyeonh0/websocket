@@ -33,6 +33,17 @@ const Chat = ({roomId, token, onLeaveRoom, email, opposite, stompClient}) => {
         }
     };
 
+    const deleteChatRoom = async () => {
+        try {
+            await axios.delete(`http://localhost:5000/api/v1/chatrooms/${roomId}`,
+                {headers: {Authorization: `${token}`}},
+            );
+            onLeaveRoom();
+        } catch (error) {
+            console.error("Delete ChatRoom fail:", error);
+        }
+    };
+
     const sendMessage = () => {
         if (stompClientRef.current && messageContent.trim()) {
             stompClientRef.current.publish({
@@ -186,6 +197,23 @@ const Chat = ({roomId, token, onLeaveRoom, email, opposite, stompClient}) => {
                 }}
             >
                 Leave Room
+            </button>
+            <button
+                onClick={deleteChatRoom}
+                style={{
+                    marginTop: "10px",
+                    padding: "10px 20px",
+                    border: "none",
+                    borderRadius: "10px",
+                    backgroundColor: "#ff6f61",
+                    color: "#fff",
+                    fontWeight: "bold",
+                    cursor: "pointer",
+                    width: "100%",
+                    transition: "background-color 0.3s",
+                }}
+            >
+                Delete Room
             </button>
         </div>
     );

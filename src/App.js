@@ -1,4 +1,4 @@
-import React, {useState} from "react";
+import React, {useEffect, useRef, useState} from "react";
 import axios from "axios";
 import Chat from "./components/Chat";
 import {Stomp} from "@stomp/stompjs";
@@ -12,6 +12,12 @@ const App = () => {
     const [password, setPassword] = useState("")
     const [stompClient, setStompClient] = useState(null);
     const [isLogined, setIsLogined] = useState(false);
+    const [users, setUsers] = useState([]);
+    const chosenRoomId = useRef(selectedRoomId);
+
+    useEffect(() => {
+        chosenRoomId.current = selectedRoomId;
+    }, [selectedRoomId]);
 
     const fetchChatRooms = async (access) => {
         try {
@@ -35,6 +41,15 @@ const App = () => {
                 client.subscribe(`/user/queue/notifications`, (message) => {
                     const notice = JSON.parse(message.body);
                     alert(notice.content);
+                    fetchChatRooms(access);
+                });
+
+                client.subscribe(`/user/queue/chatroom-close`, (message) => {
+                    const notice = JSON.parse(message.body);
+                    if (chosenRoomId.current === notice.chatRoomId) {
+                        alert(notice.message);
+                        setSelectedRoomId(null);
+                    }
                     fetchChatRooms(access);
                 });
             });
@@ -64,6 +79,7 @@ const App = () => {
                 setToken(response.headers.get("Authorization"));
                 console.log(`로그인 성공: ${token}`);
                 alert("로그인에 성공하셨습니다.");
+                fetchUsersForChat(responseToken);
                 fetchChatRooms(responseToken);
                 connectWebSocket(responseToken);
             } else {
@@ -77,11 +93,11 @@ const App = () => {
         }
     };
 
-    const createChatRoom = async () => {
+    const createChatRoom = async (oppositeUser) => {
         try {
             const response = await axios.post(
                 "http://localhost:5000/api/v1/chatrooms",
-                {user1: email, user2: opposite},
+                {userEmail: email, oppositeEmail: oppositeUser},
                 {headers: {Authorization: `${token}`}}
             );
             const newChatRoom = response.data;
@@ -89,11 +105,25 @@ const App = () => {
             if (!isDuplicate) {
                 setChatRooms([...chatRooms, newChatRoom]);
             }
-            setOpposite("");
+            fetchChatRooms(token);
+            setSelectedRoomId(response.data.chatRoomId);
         } catch (error) {
             console.error("Error creating chat room:", error);
         }
-        fetchChatRooms(token);
+    };
+
+    const fetchUsersForChat = async (access) => {
+        try {
+            const response = await axios.get(
+                `http://localhost:5000/api/v1/users/chat-users`,
+                {
+                    headers: {Authorization: `${access}`},
+                }
+            );
+            setUsers(response.data);
+        } catch (error) {
+            console.error("Error fetching users:", error);
+        }
     };
 
     return (
@@ -119,14 +149,34 @@ const App = () => {
                     <button type="submit">Login</button>
                 </form>
             ) : (
-                <h2>환영합니다!</h2>
+                <h2>채팅 서비스</h2>
             )
             }
 
-
-            {!selectedRoomId ? (
+            {(!selectedRoomId && isLogined) ? (
                 <div>
-                    <h1>Chat Rooms</h1>
+                    <h1>채팅 가능 유저 목록</h1>
+                    <ul>
+                        {users.map((user) => (
+                            <li key={user.email}>
+                                <button onClick={() => {
+                                    createChatRoom(user.email);
+                                    setOpposite(user.email);
+                                }}>
+                                    {user.username}
+                                </button>
+                            </li>
+                        ))}
+                    </ul>
+                    <h1>참여중인 채팅방 목록</h1>
+                </div>
+            ) : (
+                <div></div>
+            )}
+
+
+            {(!selectedRoomId) ? (
+                <div>
                     <ul>
                         {chatRooms.map((room) => (
                             <li key={room.chatRoomId}>
@@ -137,22 +187,11 @@ const App = () => {
                                     {room.oppositeName}
                                 </button>
                                 <div>
-                                    {room.unReadCount}
+                                {room.unReadCount}
                                 </div>
                             </li>
                         ))}
                     </ul>
-
-                    <div>
-                        <h2>Create New Chat Room</h2>
-                        <input
-                            type="text"
-                            value={opposite}
-                            onChange={(e) => setOpposite(e.target.value)}
-                            placeholder="Enter username you want to chat"
-                        />
-                        <button onClick={createChatRoom}>Create</button>
-                    </div>
                 </div>
             ) : (
                 <Chat
